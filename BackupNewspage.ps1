@@ -37,7 +37,7 @@ Write-Line -Length 50 -Path $log
 
 
 $newspage = (Get-WJPath -Name newspage).Path
-$workDate = (Get-Date).AddDays(-14)
+$workDate = (Get-Date).AddDays(-15)
 $workPath = ($newspage + $workDate.ToString("yyyyMMdd"))
 $bBanPath = ($newspage + "¸Éª©\" + $workDate.ToString("yyyyMMdd"))
 $bBanIncl = @("4259*.pdf", "4257*.pdf", "4267*.pdf")
