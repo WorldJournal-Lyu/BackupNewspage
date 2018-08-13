@@ -53,7 +53,7 @@ Write-Line -Length 50 -Path $log
 
 
 
-# Find all 4259* 4257* 4267* pdf files
+# Find all $bBanIncl pdf files
 
 if(Test-Path $workPath){
     $items = @(Get-ChildItem -Path $workPath -Include $bBanIncl -Exclude $bBanExcl -Recurse)
