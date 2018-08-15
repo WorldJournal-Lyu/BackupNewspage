@@ -88,6 +88,7 @@ if($items.Count -ne 0){
         }catch{
 
             $mailMsg = $mailMsg + (Write-Log -Verb "COPY TO" -Noun $copyTo -Path $log -Type Long -Status Bad -Output String) + "`n"
+            $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception.Message -Path $log -Type Short -Status Bad -Output String) + "`n"
             $hasError = $true
 
         }
