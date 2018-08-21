@@ -40,15 +40,19 @@ Write-Line -Length 50 -Path $log
 
 
 $newspage = (Get-WJPath -Name newspage).Path
+$n_backup = (Get-WJPath -Name newspage_backup).Path
 $workDate = (Get-Date).AddDays(-15)
 $workPath = ($newspage + $workDate.ToString("yyyyMMdd"))
+$bkupPath = ($n_backup + $workDate.ToString("yyyyMMdd"))
 $bBanPath = ($newspage + "¸Éª©\" + $workDate.ToString("yyyyMMdd"))
 $bBanIncl = @("4259*.pdf", "4257*.pdf", "4267*.pdf")
 $bBanExcl = @("*wk.pdf")
 
 Write-Log -Verb "newspage" -Noun $newspage -Path $log -Type Short -Status Normal
+Write-Log -Verb "n_backup" -Noun $n_backup -Path $log -Type Short -Status Normal
 Write-Log -Verb "workDate" -Noun $workDate -Path $log -Type Short -Status Normal
 Write-Log -Verb "workPath" -Noun $workPath -Path $log -Type Short -Status Normal
+Write-Log -Verb "bkupPath" -Noun $bkupPath -Path $log -Type Short -Status Normal
 Write-Log -Verb "bBanPath" -Noun $bBanPath -Path $log -Type Short -Status Normal
 Write-Log -Verb "bBanIncl" -Noun ($bBanIncl -join ", ") -Path $log -Type Short -Status Normal
 Write-Log -Verb "bBanExcl" -Noun ($bBanExcl -join ", ") -Path $log -Type Short -Status Normal
@@ -59,22 +63,37 @@ Write-Line -Length 50 -Path $log
 # Find all $bBanIncl pdf files
 
 if(Test-Path $workPath){
+
     $items = @(Get-ChildItem -Path $workPath -Include $bBanIncl -Exclude $bBanExcl -Recurse)
+
 }else{
+
     $items = @()
     $mailMsg = $mailMsg + (Write-Log -Verb "NO FOLDER" -Noun $workPath -Path $log -Type Long -Status Bad -Output String) + "`n"
     $hasError = $true
+
 }
 
 
 
+# Copy $bBanIncl pdf files
+
 if($items.Count -ne 0){
 
     if(!(Test-Path $bBanPath)){
+
         New-Item $bBanPath -ItemType Directory | Out-Null
-        Write-Log -Verb "CREATE" -Noun $bBanPath -Path $log -Type Long -Status Normal
+        Write-Log -Verb "NEW" -Noun $bBanPath -Path $log -Type Long -Status Normal
+
     }
 
+    $items | Copy-Files -From $workPath -To $bBanPath | ForEach-Object{
+        Write-Log -Verb "copyFrom" -Noun $_.CopyFrom -Path $log -Type Short -Status Normal
+        Write-Log -Verb "copyTo" -Noun $_.CopyTo -Path $log -Type Short -Status Normal
+        Write-Log -Verb $_.Verb -Noun $_.Noun -Path $log -Type Long -Status $_.Status
+    }
+
+    <#
     foreach($i in $items){
 
         $copyFrom = $i.FullName
@@ -97,6 +116,7 @@ if($items.Count -ne 0){
         }
 
     }
+    #>
 
 }else{
 
@@ -106,6 +126,66 @@ if($items.Count -ne 0){
 
 
 
+Write-Line -Length 50 -Path $log
+
+
+
+# Create $bkupPath
+
+if(!(Test-Path $bkupPath)){
+
+    New-Item $bkupPath -ItemType Directory | Out-Null
+    Write-Log -Verb "NEW" -Noun $bkupPath -Path $log -Type Long -Status Normal
+
+}
+
+
+
+# Move-Files from $workPath to $bkupPath
+
+Get-ChildItemPlus $workPath | Sort-Object -Descending | Move-Files -From $workPath -To $bkupPath | ForEach-Object{
+
+    Write-Log -Verb "moveFrom" -Noun $_.MoveFrom -Path $log -Type Short -Status Normal
+    Write-Log -Verb "moveTo" -Noun $_.MoveTo -Path $log -Type Short -Status Normal
+    Write-Log -Verb $_.Verb -Noun $_.Noun -Path $log -Type Long -Status $_.Status
+
+    if($_.Status -eq "Bad"){
+
+        $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception -Path $log -Type Short -Status $_.Status -Output String) + "`n"
+        $hasError = $true
+
+    }
+
+}
+
+
+
+# Delete $workPath
+
+if($hasError){
+
+    $mailMsg = $mailMsg + (Write-Log -Verb "REMOVE SKIP" -Noun $workPath -Path $log -Type Long -Status Bad -Output String) + "`n"
+
+}else{
+
+    Write-Log -Verb "REMOVE" -Noun $workPath -Path $log -Type Long -Status Normal
+
+    try{
+
+        $temp = $workPath
+        Remove-Item $workPath -Recurse -Force -ErrorAction Stop
+        Write-Log -Verb "REMOVE" -Noun $temp -Path $log -Type Long -Status Good
+
+    }catch{
+
+        $mailMsg = $mailMsg + (Write-Log -Verb "REMOVE" -Noun $temp -Path $log -Type Long -Status Bad -Output String) + "`n"
+        $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception.Message -Path $log -Type Short -Status Bad -Output String) + "`n"
+        $hasError = $true
+
+    }
+
+}
+
 
 
 ###################################################################################
@@ -114,11 +194,11 @@ if($items.Count -ne 0){
 
 Write-Log -Verb "REMOVE" -Noun $localTemp -Path $log -Type Long -Status Normal
 try{
-    $bBanPath = $localTemp
+    $temp = $localTemp
     Remove-Item $localTemp -Recurse -Force -ErrorAction Stop
-    Write-Log -Verb "REMOVE" -Noun $bBanPath -Path $log -Type Long -Status Good
+    Write-Log -Verb "REMOVE" -Noun $temp -Path $log -Type Long -Status Good
 }catch{
-    $mailMsg = $mailMsg + (Write-Log -Verb "REMOVE" -Noun $bBanPath -Path $log -Type Long -Status Bad -Output String) + "`n"
+    $mailMsg = $mailMsg + (Write-Log -Verb "REMOVE" -Noun $temp -Path $log -Type Long -Status Bad -Output String) + "`n"
     $mailMsg = $mailMsg + (Write-Log -Verb "Exception" -Noun $_.Exception.Message -Path $log -Type Short -Status Bad -Output String) + "`n"
 }
 
