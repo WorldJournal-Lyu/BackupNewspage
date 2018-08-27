@@ -158,6 +158,9 @@ Get-ChildItemPlus $workPath | Sort-Object -Descending | Move-Files -From $workPa
 
 }
 
+Write-Line -Length 50 -Path $log
+
+
 
 
 # Delete $workPath
